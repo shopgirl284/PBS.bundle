@@ -1,26 +1,18 @@
-import re
-
-PBS_PREFIX      = "/video/pbs"
-CACHE_INTERVAL  = 3600 * 3
-PBS_URL         = 'http://video.pbs.org/'
-PAGE_SIZE  		= 12
+PBS_URL = 'http://video.pbs.org/'
+PAGE_SIZE = 12
 
 # Used for platforms that do not have the Helper decrypt binary
 PBS_WEB_VIDEO_PREFIX = 'http://www-tc.pbs.org/s3/pbs.videoportal-prod.cdn/media/swf/PBSPlayer.swf?embed=true&start=0&width=512&height=288&reporting_url=&session_id=-&video=http://video.pbs.org/videoPlayerInfo/%s'
 
 ####################################################################################################
 def Start():
-  Plugin.AddPrefixHandler(PBS_PREFIX, VideoMenu, 'PBS', 'icon-default.png', 'art-default.jpg')
-  Plugin.AddViewGroup("Details", viewMode="InfoList", mediaType="items")
+  Plugin.AddPrefixHandler('/video/pbs', VideoMenu, 'PBS', 'icon-default.png', 'art-default.jpg')
+  Plugin.AddViewGroup('InfoList', viewMode='InfoList', mediaType='items')
   MediaContainer.title1 = 'PBS'
   MediaContainer.content = 'Items'
   MediaContainer.art = R('art-default.jpg')
-  DirectoryItem.thumb = R("icon-default.png")
-  HTTP.CacheTime = CACHE_INTERVAL
-
-####################################################################################################
-def UpdateCache():
-  HTTP.Request(PBS_URL)
+  DirectoryItem.thumb = R('icon-default.png')
+  HTTP.CacheTime = CACHE_1HOUR * 3
 
 ####################################################################################################
 def VideoMenu():
@@ -28,7 +20,7 @@ def VideoMenu():
   dir.Append(Function(DirectoryItem(GetPrograms, title="All Programs"), cls='subnav hide threecol'))
   dir.Append(Function(DirectoryItem(GetPrograms, title="All Topics"), cls='subnav hide twocol', prefix="li[@class='topics-nav']/", path='li/ol/li/a/text()[normalize-space(.)]/parent::a'))
   dir.Append(Function(DirectoryItem(GetMostWatched, title="Most Watched")))  
-  dir.Append(Function(InputDirectoryItem(Search, title=L("Search..."), prompt=L("Search for Videos"), thumb=S('search.png'))))
+  dir.Append(Function(InputDirectoryItem(Search, title=L("Search..."), prompt=L("Search for Videos"), thumb=S('icon-search.png'))))
   return dir
 
 ####################################################################################################
@@ -58,7 +50,7 @@ def GetMostWatched(sender):
   
 ####################################################################################################
 def GetEpisodes(sender, pid, page=1):
-  dir = MediaContainer(viewGroup='Details', title2=sender.itemTitle)
+  dir = MediaContainer(viewGroup='InfoList', title2=sender.itemTitle)
   url = pid
   data = HTML.ElementFromURL(url)
   for episode in data.xpath('//div[@id="fullepisodes"]//div[@class="videobox "]'):
@@ -83,7 +75,7 @@ def GetEpisodes(sender, pid, page=1):
   
 ####################################################################################################
 def Search(sender, query, page=1):
-  dir = MediaContainer(viewGroup='Details', title2='Search Results', replaceParent=(page>1))
+  dir = MediaContainer(viewGroup='InfoList', title2='Search Results', replaceParent=(page>1))
   query = query.replace(' ', '+')
   data = HTML.ElementFromURL('http://www.pbs.org/search/?q=%s&mediatype=Video&start=%d' % (query, (int(page)-1)*10))
   for show in data.xpath('//div[@class="ez-mod ez-itemMod ez-mainSearch ez-col-1"]//li'):
