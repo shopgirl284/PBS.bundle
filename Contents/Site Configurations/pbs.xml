@@ -2,9 +2,9 @@
 <site site="http://www-tc.pbs.org"
 	plugin="http://www-tc.pbs.org/s3/pbs.videoportal-prod.cdn/media/swf/PBSPlayer.swf"
 	initialState="playing"
-	version="2.0">
+	version="3.0">
 
-	<crop x="0" y="0" width="512" height="288" />
+	<crop x="0" y="0" width="0" height="0" />
 
 	<!-- SEEKBAR - does not work probably due to it being semi-transparent
 	<seekbar type="thumb">
