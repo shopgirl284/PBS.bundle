@@ -62,7 +62,10 @@ def GetEpisodes(uri, title='Episodes', page=1):
     oc.add(VideoClipObject(url=PBS_VIDEO_URL % tp_id, title=title, summary=summary, originally_available_at=Datetime.ParseDate(airdate).date(),
       thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')))
   
-  return oc
+  if len(oc) == 0:
+    return ObjectContainer(header='PBS', message='No Episodes found')
+  else:
+    return oc
 
 ####################################################################################################
 @route('/video/pbs/mostwatched')
