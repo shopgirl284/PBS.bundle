@@ -3,7 +3,6 @@ SortThumbs	= SharedCodeService.SortThumbs.SortThumbs
 API_ID		= SharedCodeService.PBS_API.API_ID
 API_SECRET	= SharedCodeService.PBS_API.API_SECRET
 
-PBS_PREFIX      = "/video/pbs"
 CACHE_INTERVAL  = 3600 * 3
 PBS_URL         = 'http://video.pbs.org/'
 PBS_VIDEO_URL   = 'http://video.pbs.org/video/%s'
@@ -13,23 +12,20 @@ COVEAPI_HOST 	= 'http://api.pbs.org'
 ALL_PROGRAMS 	= '/cove/v1/programs/?fields=associated_images'
 ALL_EPISODES	= '/cove/v1/videos/?fields=associated_images&filter_availability_status=Available&filter_program=%s&filter_type=Episode&order_by=-airdate'
 
-NAMESPACES = {'a':'http://www.w3.org/2001/SMIL20/Language'}
-
 ####################################################################################################
 def Start():
-  Plugin.AddPrefixHandler(PBS_PREFIX, VideoMenu, 'PBS', 'icon-default.png', 'art-default.jpg')
   ObjectContainer.title1 = 'PBS'
   ObjectContainer.art = R('art-default.jpg')
-  DirectoryObject.thumb = R("icon-default.png")
+  DirectoryObject.thumb = R('icon-default.png')
   HTTP.CacheTime = CACHE_INTERVAL
 
 ####################################################################################################
-@route('/video/pbs/videomenu')
+@handler('/video/pbs', 'PBS', thumb='icon-default.png', art='art-default.jpg')
 def VideoMenu():
   oc = ObjectContainer(no_cache=True)
   oc.add(DirectoryObject(key=Callback(GetPrograms), title=L('All Programs')))
   oc.add(DirectoryObject(key=Callback(GetMostWatched), title=L('Most Watched')))
-  oc.add(SearchDirectoryObject(identifier="com.plexapp.plugins.pbs", title=L("Search..."), prompt=L("Search for Videos"), thumb=R('search.png')))
+  oc.add(SearchDirectoryObject(identifier="com.plexapp.plugins.pbs", title=L("Search..."), prompt=L("Search for Videos"), thumb=R('icon-search.png')))
   return oc
 
 ####################################################################################################
