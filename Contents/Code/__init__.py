@@ -25,7 +25,7 @@ def VideoMenu():
   oc = ObjectContainer(no_cache=True)
   oc.add(DirectoryObject(key=Callback(GetPrograms), title=L('All Programs')))
   oc.add(DirectoryObject(key=Callback(GetMostWatched), title=L('Most Watched')))
-  oc.add(SearchDirectoryObject(identifier="com.plexapp.plugins.pbs", title=L("Search..."), prompt=L("Search for Videos"), thumb=R('icon-search.png')))
+  oc.add(SearchDirectoryObject(identifier="com.plexapp.plugins.pbs", title=L("Search..."), prompt=L("Search for Videos"), thumb=R('search.png')))
   return oc
 
 ####################################################################################################
