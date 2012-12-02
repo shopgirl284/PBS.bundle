@@ -40,6 +40,8 @@ def GetPrograms():
     summary = program['long_description']
     uri = program['resource_uri']
     oc.add(DirectoryObject(key=Callback(GetEpisodes, uri=uri, title=title), title=title, tagline=tagline, summary=summary, thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')))
+    # these need proper sorting, the API doesn't give them to us in alphabetical order
+    oc.objects.sort(key = lambda obj: obj.title)
   return oc
 
 ####################################################################################################
