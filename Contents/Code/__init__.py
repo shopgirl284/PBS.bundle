@@ -26,22 +26,27 @@ def VideoMenu():
   oc.add(DirectoryObject(key=Callback(GetPrograms), title=L('All Programs')))
   oc.add(DirectoryObject(key=Callback(GetMostWatched), title=L('Most Watched')))
   oc.add(SearchDirectoryObject(identifier="com.plexapp.plugins.pbs", title=L("Search..."), prompt=L("Search for Videos"), thumb=R('search.png')))
+
   return oc
 
 ####################################################################################################
 @route('/video/pbs/programs')
 def GetPrograms():
   oc = ObjectContainer(title2=L('All Programs'))
-  programs = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(ALL_PROGRAMS)
-  for program in programs['results']:
-    thumbs = SortThumbs(program['associated_images'])
-    title = program['title']
-    tagline = program['short_description']
-    summary = program['long_description']
-    uri = program['resource_uri']
-    oc.add(DirectoryObject(key=Callback(GetEpisodes, uri=uri, title=title), title=title, tagline=tagline, summary=summary, thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')))
-    # these need proper sorting, the API doesn't give them to us in alphabetical order
-    oc.objects.sort(key = lambda obj: obj.title)
+  loop = ['','&limit_start=200','&limit_start=400'] # there are over 400 listed shows in the main listing and we get them in chunks of 200
+  for i in loop:
+	  programs = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(ALL_PROGRAMS+i)
+	  for program in programs['results']:
+	    thumbs = SortThumbs(program['associated_images'])
+	    title = program['title']
+	    tagline = program['short_description']
+	    summary = program['long_description']
+	    uri = program['resource_uri']
+	    oc.add(DirectoryObject(key=Callback(GetEpisodes, uri=uri, title=title), title=title, tagline=tagline, summary=summary, thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')))
+
+  # these need proper sorting, the API doesn't give them to us in alphabetical order
+  oc.objects.sort(key = lambda obj: obj.title)
+
   return oc
 
 ####################################################################################################
