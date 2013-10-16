@@ -9,9 +9,8 @@ PBS_VIDEO_URL   = 'http://video.pbs.org/video/%s'
 PAGE_SIZE  		= 12
 
 COVEAPI_HOST 	= 'http://api.pbs.org'
-ALL_PROGRAMS 	= '/cove/v1/programs/?fields=associated_images&filter_producer__name=PBS'
 PROGRAMS 	    = '/cove/v1/programs/?fields=associated_images&%s'
-ALL_EPISODES	= '/cove/v1/videos/?fields=associated_images&filter_availability_status=Available&filter_program=%s&filter_type=Episode&order_by=-airdate'
+EPISODES	    = '/cove/v1/videos/?fields=associated_images,program&filter_availability_status=Available&%s&filter_type=Episode&order_by=-airdate'
 SEARCH_URL	    = 'http://video.pbs.org/search/?q=%s'
 
 ####################################################################################################
@@ -25,36 +24,52 @@ def Start():
 @handler('/video/pbs', 'PBS', thumb='icon-default.png', art='art-default.jpg')
 def VideoMenu():
   oc = ObjectContainer(no_cache=True)
-  oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL + '/programs/', title='Featured Programs', filter='filter_title=', xpath='carouselProgramList'), title='Featured Programs'))
-  oc.add(DirectoryObject(key=Callback(AllPrograms, title='All PBS Programs'), title='All PBS Programs'))
-  oc.add(DirectoryObject(key=Callback(SectionVideos, title='Most Popular Videos', type='popular/', url=PBS_URL), title='Most Popular Videos'))
-  oc.add(DirectoryObject(key=Callback(SectionVideos, title='Videos Expiring Soon', type='expiring/', url=PBS_URL), title='Videos Expiring Soon'))
+  oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL + '/programs/', title='Featured Shows', filter='filter_title=', xpath='videoItem'), title='Featured Shows'))
+  oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL, title='All PBS Programs', filter='filter_producer__name=', xpath='PBS'), title='All PBS Programs'))
+  oc.add(InputDirectoryObject(key=Callback(ProducePrograms, url=SEARCH_URL, title='Search PBS Shows', filter='filter_title=', xpath='programItem'), title='Search for PBS Shows', summary="Click here to search for shows", prompt="Search for the shows you would like to find"))
+  oc.add(DirectoryObject(key=Callback(GetEpisodes, title='Videos Expiring Soon', filter='filter_expire_datetime__lt=', uri=''), title='Videos Expiring Soon'))
+  oc.add(DirectoryObject(key=Callback(GetEpisodes, title='Latest Videos', filter='filter_available_datetime__gt=', uri=''), title='Latest Videos'))
   oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL, title='Local Channel Shows', filter='filter_producer__name=', xpath=''), title='Local Channel Shows'))
-  oc.add(InputDirectoryObject(key=Callback(SectionVideos, title='Search PBS Videos', url=SEARCH_URL, type=''), title='Search PBS Videos', summary="Click here to search videos", prompt="Search for the videos you would like to find"))
+  oc.add(SearchDirectoryObject(identifier="com.plexapp.plugins.pbs", title=L("Search PBS Videos"), prompt=L("Search for Videos")))
   oc.add(PrefsObject(title = L('Preferences')))
 
   return oc
 
 ####################################################################################################
+# This function allows us to pull up shows using the API with different filters. That way we can always get the proper
+# uri number needed to produce episodes in the EpisodeFind Function. We either use the title filter or producer filter
 @route('/video/pbs/produceprograms')
-def ProducePrograms(title, url, filter, xpath):
+def ProducePrograms(title, url, filter, xpath, query=''):
   oc = ObjectContainer(title2=title)
+  # This is for title filters. Currently titles can be pulled by a search or from the program page
+  # We then construct the url and send it to the ProgramList function to produce a list of titles
   if 'title' in filter:
+    if query:
+      url = url %String.Quote(query, usePlus = True)
     show_list = ProgramList(url, xpath)
+  # This is for producer filters. We separate it by putting 'PBS' in the xpath field
+  # so it either uses that xpath field or pulls the local producer filter from the Preferences
   else:
-    producer = Prefs['local']
+    if xpath:
+      producer = xpath
+    else:
+      producer = Prefs['local']
+    # We then create a showlist of one, so the function will loop properly
     show_list = [producer]
   for show in show_list:
     show_filter = filter + show
     local_url = PROGRAMS %show_filter
-    programs = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(local_url)
-    for program in programs['results']:
-      thumbs = SortThumbs(program['associated_images'])
-      title = program['title']
-      tagline = program['short_description']
-      summary = program['long_description']
-      uri = program['resource_uri']
-      oc.add(DirectoryObject(key=Callback(GetEpisodes, uri=uri, title=title), title=title, tagline=tagline, summary=summary, thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')))
+    # there are over 400 listed shows in the main listing and we get them in chunks of 200. This loop makes sure we get that full list
+    loop = ['','&limit_start=200','&limit_start=400'] 
+    for i in loop:
+      programs = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(local_url+i)
+      for program in programs['results']:
+        thumbs = SortThumbs(program['associated_images'])
+        title = program['title']
+        tagline = program['short_description']
+        summary = program['long_description']
+        uri = program['resource_uri']
+        oc.add(DirectoryObject(key=Callback(GetEpisodes, uri=uri, title=title, filter='filter_program='), title=title, tagline=tagline, summary=summary, thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')))
 
   # these need proper sorting, the API doesn't give them to us in alphabetical order
   oc.objects.sort(key = lambda obj: obj.title)
@@ -62,40 +77,45 @@ def ProducePrograms(title, url, filter, xpath):
   return oc
 
 ####################################################################################################
-@route('/video/pbs/allprograms')
-def AllPrograms(title):
-  oc = ObjectContainer(title2=title)
-  loop = ['','&limit_start=200','&limit_start=400'] # there are over 400 listed shows in the main listing and we get them in chunks of 200
-  for i in loop:
-	  programs = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(ALL_PROGRAMS+i)
-	  for program in programs['results']:
-	    thumbs = SortThumbs(program['associated_images'])
-	    title = program['title']
-	    tagline = program['short_description']
-	    summary = program['long_description']
-	    uri = program['resource_uri']
-	    oc.add(DirectoryObject(key=Callback(GetEpisodes, uri=uri, title=title), title=title, tagline=tagline, summary=summary, thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')))
-
-  # these need proper sorting, the API doesn't give them to us in alphabetical order
-  oc.objects.sort(key = lambda obj: obj.title)
-
-  return oc
-
-####################################################################################################
+# This function allows us to pull up videos using the API with different filters. 
+# We either use the program (uri) filter or date filter with one week lead time
+# with the 'filter_available_datetime__gt' filters for latest and filter_expire_datetime__lt for expiring
 @route('/video/pbs/episodes')
-def GetEpisodes(uri, title='Episodes', page=1):
+def GetEpisodes(uri, filter, title='Episodes'):
   oc = ObjectContainer(title2=title)
-  show_id = uri.split('/')[-2]
-  videos = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(ALL_EPISODES % show_id)
+  if 'program' in filter:
+    show_id = uri.split('/')[-2]
+    show_filter = filter + show_id
+ # else this is a datetime filter
+  else:
+    # set the date in YYYY-MM-DD format for one week from today or one week prior to today
+    if 'expire' in filter:
+      week_date = str(Datetime.Now().date() + Datetime.Delta(days=7))
+    else:
+      week_date = str(Datetime.Now().date() - Datetime.Delta(days=7))
+    show_filter = filter + week_date
+  local_url = EPISODES % show_filter
+  # There is an issue with converting commas correctly, so do it manually here to prevent 401 errors
+  local_url = local_url.replace(',', '%2C')
+  # Due to an API error, in order to get both fields added, you have to use the loop
+  videos = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(local_url)
+  Log('the value of videos is %s' %videos)
   for video in videos['results']:
     thumbs = SortThumbs(video['associated_images'])
+    show_title = video['program']['title']
     airdate = video['airdate']
     summary = video['long_description']
     title = video['title']
     uri = video['resource_uri']
     tp_id = video['tp_media_object_id']
-    oc.add(VideoClipObject(url=PBS_VIDEO_URL % tp_id, title=title, summary=summary, originally_available_at=Datetime.ParseDate(airdate).date(),
-      thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')))
+    oc.add(VideoClipObject(
+      url=PBS_VIDEO_URL % tp_id,
+      title=title,
+      source_title=show_title,
+      summary=summary,
+      originally_available_at=Datetime.ParseDate(airdate).date(),
+      thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')
+      ))
   
   if len(oc) == 0:
     return ObjectContainer(header='PBS', message='No Episodes found')
@@ -103,61 +123,11 @@ def GetEpisodes(uri, title='Episodes', page=1):
     return oc
 
 ####################################################################################################
-@route('/video/pbs/sectionvideos')
-def SectionVideos(title, type, url, query=''):
-  oc = ObjectContainer(title2=title)
-  if query:
-    local_url = url %String.Quote(query, usePlus = True)
-  else:
-    if type:
-      local_url = url + '/' + type
-    else:
-      local_url = url
-  data = HTML.ElementFromURL(local_url)
-  for show in data.xpath('//li[@class="videoItem"]'):
-    try:
-      href = PBS_URL + show.xpath('./a//@href')[0]
-    except:
-      continue
-    show_title = show.xpath('./div/h4/a//text()')[0]
-    title = show.xpath('./div/h3/a//text()')[0]
-    summary = show.xpath('./p[@class="description"]//text()')[0].strip()
-    thumb_data = show.xpath('./a/span//@data-r0')[0]
-    thumb = HTML.ElementFromString(thumb_data).xpath('//img//@src')[0].split('.fit')[0]
-    duration = show.xpath('./p[@class="duration"]//text()')[0].split('|')[0]
-    duration = duration.strip()
-    try:
-      duration = Datetime.MillisecondsFromString(duration)
-    except:
-      duration = None
-    oc.add(VideoClipObject(url=href, title=title, source_title=show_title, summary=summary, duration=duration, thumb=Resource.ContentsOfURLWithFallback(url=thumb, fallback='icon-default.png')))
-  
-  # This goes through all the pages of a search
-  # After first page, the Prev and Next have the same page_url, so have to check for
-  try:
-    page_type = data.xpath('//ul[@class="pagination"]/li/a//text()')
-    x = len(page_type)-1
-    if 'Next' in page_type[x]:
-      page_url = data.xpath('//ul[@class="pagination"]/li/a//@href')[x]
-      oc.add(NextPageObject(
-        key = Callback(SectionVideos, title=title, type=type, url=PBS_URL + page_url), 
-        title = L("Next Page ...")))
-    else:
-      pass
-  except:
-    pass
-    
-  if len(oc) == 0:
-    return ObjectContainer(header='PBS', message='No Episodes found')
-  else:
-    return oc
-  
-####################################################################################################
 @route('/video/pbs/programlist')
 def ProgramList(url, xpath):
   title_list = []
   data = HTML.ElementFromURL(url)
-  for show in data.xpath('//ul[@id="%s"]/li[@class="videoItem"]' %xpath):
+  for show in data.xpath('//li[@class="%s"]' %xpath):
     title = show.xpath('./h3/a//text()')[0]
     api_title = String.Quote(title, usePlus = True)
     title_list.append(api_title)
