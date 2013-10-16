@@ -97,9 +97,7 @@ def GetEpisodes(uri, filter, title='Episodes'):
   local_url = EPISODES % show_filter
   # There is an issue with converting commas correctly, so do it manually here to prevent 401 errors
   local_url = local_url.replace(',', '%2C')
-  # Due to an API error, in order to get both fields added, you have to use the loop
   videos = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(local_url)
-  Log('the value of videos is %s' %videos)
   for video in videos['results']:
     thumbs = SortThumbs(video['associated_images'])
     show_title = video['program']['title']
