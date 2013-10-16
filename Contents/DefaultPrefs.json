@@ -1,0 +1,10 @@
+[
+
+        {
+                "id":                   "local",
+                "label":                "Local PBS Station Code",
+                "type":         "text",
+                "default":      "",
+        },
+
+]
