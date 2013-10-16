@@ -1,4 +1,7 @@
-SEARCH_URL	    = 'http://video.pbs.org/search/?q=%s'
+# This would set the search service to search for videos within the PBS website
+#SEARCH_URL	    = 'http://video.pbs.org/search/?q=%s'
+# This would set the search service to only search for full episodes within the PBS website
+SEARCH_URL	    = 'http://video.pbs.org/search/?q=%s&type=episode'
 PBS_URL         = 'http://video.pbs.org'
 
 ####################################################################################################
