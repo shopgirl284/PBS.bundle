@@ -1,5 +1,4 @@
 PBS 		= SharedCodeService.CoveAPI.connect
-SortThumbs	= SharedCodeService.SortThumbs.SortThumbs
 API_ID		= SharedCodeService.PBS_API.API_ID
 API_SECRET	= SharedCodeService.PBS_API.API_SECRET
 
@@ -64,7 +63,10 @@ def ProducePrograms(title, url, filter, xpath, query=''):
     for i in loop:
       programs = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(local_url+i)
       for program in programs['results']:
-        thumbs = SortThumbs(program['associated_images'])
+        try:
+          thumbs = program['associated_images'][0]['url']
+        except:
+          thumbs = ""
         title = program['title']
         tagline = program['short_description']
         summary = program['long_description']
@@ -99,7 +101,10 @@ def GetEpisodes(uri, filter, title='Episodes'):
   local_url = local_url.replace(',', '%2C')
   videos = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(local_url)
   for video in videos['results']:
-    thumbs = SortThumbs(video['associated_images'])
+    try:
+      thumbs = program['associated_images'][0]['url']
+    except:
+      thumbs = ""
     show_title = video['program']['title']
     airdate = video['airdate']
     summary = video['long_description']
