@@ -1,4 +1,5 @@
 PBS 		= SharedCodeService.CoveAPI.connect
+SortThumbs  = SharedCodeService.SortThumbs.SortThumbs
 API_ID		= SharedCodeService.PBS_API.API_ID
 API_SECRET	= SharedCodeService.PBS_API.API_SECRET
 
@@ -59,14 +60,14 @@ def ProducePrograms(title, url, filter, xpath, query=''):
     show_filter = filter + show
     local_url = PROGRAMS %show_filter
     # there are over 400 listed shows in the main listing and we get them in chunks of 200. This loop makes sure we get that full list
-    loop = ['','&limit_start=200','&limit_start=400'] 
+    if show == "PBS":
+      loop = ['','&limit_start=200','&limit_start=400'] 
+    else:
+      loop = ['']
     for i in loop:
       programs = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(local_url+i)
       for program in programs['results']:
-        try:
-          thumbs = program['associated_images'][0]['url']
-        except:
-          thumbs = ""
+        thumbs = SortThumbs(program['associated_images'])
         title = program['title']
         tagline = program['short_description']
         summary = program['long_description']
@@ -101,10 +102,7 @@ def GetEpisodes(uri, filter, title='Episodes'):
   local_url = local_url.replace(',', '%2C')
   videos = PBS(String.Decode(API_ID), String.Decode(API_SECRET)).programs.get(local_url)
   for video in videos['results']:
-    try:
-      thumbs = program['associated_images'][0]['url']
-    except:
-      thumbs = ""
+    thumbs = SortThumbs(video['associated_images'])
     show_title = video['program']['title']
     airdate = video['airdate']
     summary = video['long_description']
