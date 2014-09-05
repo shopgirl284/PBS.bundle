@@ -6,14 +6,18 @@ PBS_URL         = 'http://video.pbs.org'
 
 ####################################################################################################
 def Search(query):
+
     oc = ObjectContainer(title1='PBS', title2='Search Results')
     url = SEARCH_URL % String.Quote(query, usePlus=True)
     data = HTML.ElementFromURL(url)
+
     for show in data.xpath('//li[@class="videoItem"]'):
+
         try:
             href = PBS_URL + show.xpath('./a//@href')[0]
         except:
             continue
+
         show_title = show.xpath('./div/h4/a//text()')[0]
         ep_title = show.xpath('./div/h3/a//text()')[0]
         title = '%s | %s' % (show_title, ep_title) 
@@ -26,7 +30,7 @@ def Search(query):
             duration = Datetime.MillisecondsFromString(duration)
         except:
             duration = None
+
         oc.add(VideoClipObject(url=href, title=title, summary=summary, duration=duration, thumb=Resource.ContentsOfURLWithFallback(url=thumb)))
+
     return oc
-    
- 

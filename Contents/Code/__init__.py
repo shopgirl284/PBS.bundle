@@ -16,12 +16,10 @@ SEARCH_URL	    = 'http://video.pbs.org/search/?q=%s'
 ####################################################################################################
 def Start():
   ObjectContainer.title1 = 'PBS'
-  ObjectContainer.art = R('art-default.jpg')
-  DirectoryObject.thumb = R('icon-default.png')
   HTTP.CacheTime = CACHE_INTERVAL
 
 ####################################################################################################
-@handler('/video/pbs', 'PBS', thumb='icon-default.png', art='art-default.jpg')
+@handler('/video/pbs', 'PBS')
 def VideoMenu():
   oc = ObjectContainer(no_cache=True)
   oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL + '/programs/', title='Featured Shows', filter='filter_title=', xpath='videoItem'), title='Featured Shows'))
@@ -72,7 +70,7 @@ def ProducePrograms(title, url, filter, xpath, query=''):
         tagline = program['short_description']
         summary = program['long_description']
         uri = program['resource_uri']
-        oc.add(DirectoryObject(key=Callback(GetEpisodes, uri=uri, title=title, filter='filter_program='), title=title, tagline=tagline, summary=summary, thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')))
+        oc.add(DirectoryObject(key=Callback(GetEpisodes, uri=uri, title=title, filter='filter_program='), title=title, tagline=tagline, summary=summary, thumb=Resource.ContentsOfURLWithFallback(url=thumbs)))
 
   # these need proper sorting, the API doesn't give them to us in alphabetical order
   oc.objects.sort(key = lambda obj: obj.title)
@@ -115,7 +113,7 @@ def GetEpisodes(uri, filter, title='Episodes'):
       source_title=show_title,
       summary=summary,
       originally_available_at=Datetime.ParseDate(airdate).date(),
-      thumb=Resource.ContentsOfURLWithFallback(url=thumbs, fallback='icon-default.png')
+      thumb=Resource.ContentsOfURLWithFallback(url=thumbs)
       ))
   
   if len(oc) == 0:
