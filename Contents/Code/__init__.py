@@ -103,6 +103,9 @@ def GetEpisodes(uri, filter, title='Episodes'):
     thumbs = SortThumbs(video['associated_images'])
     show_title = video['program']['title']
     airdate = video['airdate']
+    # Found an empty date so this prevent errors
+    try: airdate = Datetime.ParseDate(airdate).date()
+    except: airdate = None
     summary = video['long_description']
     title = video['title']
     uri = video['resource_uri']
@@ -112,7 +115,7 @@ def GetEpisodes(uri, filter, title='Episodes'):
       title=title,
       source_title=show_title,
       summary=summary,
-      originally_available_at=Datetime.ParseDate(airdate).date(),
+      originally_available_at=airdate,
       thumb=Resource.ContentsOfURLWithFallback(url=thumbs)
       ))
   
