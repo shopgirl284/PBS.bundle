@@ -22,7 +22,7 @@ def Start():
 @handler('/video/pbs', 'PBS')
 def VideoMenu():
   oc = ObjectContainer(no_cache=True)
-  oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL + '/programs/', title='Featured Shows', filter='filter_title=', xpath='videoItem'), title='Featured Shows'))
+  oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL + '/programs/', title='Featured Shows', filter='filter_title=', xpath='programItem'), title='Featured Shows'))
   oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL, title='All PBS Programs', filter='filter_producer__name=', xpath='PBS'), title='All PBS Programs'))
   oc.add(InputDirectoryObject(key=Callback(ProducePrograms, url=SEARCH_URL, title='Search PBS Shows', filter='filter_title=', xpath='programItem'), title='Search for PBS Shows', summary="Click here to search for shows", prompt="Search for the shows you would like to find"))
   oc.add(DirectoryObject(key=Callback(GetEpisodes, title='Videos Expiring Soon', filter='filter_expire_datetime__lt=', uri=''), title='Videos Expiring Soon'))
@@ -51,7 +51,11 @@ def ProducePrograms(title, url, filter, xpath, query=''):
     if xpath:
       producer = xpath
     else:
-      producer = Prefs['local']
+      # If they do not fill in a local PBS Call letters it will give an error when constructing the show filter later
+      if Prefs['local']:
+        producer = Prefs['local']
+      else:
+        return ObjectContainer(header='Empty', message='No Local PBS Station entered in Preferences')
     # We then create a showlist of one, so the function will loop properly
     show_list = [producer]
   for show in show_list:
@@ -129,7 +133,8 @@ def GetEpisodes(uri, filter, title='Episodes'):
 def ProgramList(url, xpath):
   title_list = []
   data = HTML.ElementFromURL(url)
-  for show in data.xpath('//li[@class="%s"]' %xpath):
+  # changed this to contains since the first one in the list includes the work "active"
+  for show in data.xpath('//li[contains(@class, "%s")]' %xpath):
     title = show.xpath('./h3/a//text()')[0]
     api_title = String.Quote(title, usePlus = True)
     title_list.append(api_title)
