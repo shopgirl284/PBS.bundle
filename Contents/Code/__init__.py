@@ -133,7 +133,7 @@ def GetEpisodes(uri, filter, title='Episodes'):
 def ProgramList(url, xpath):
   title_list = []
   data = HTML.ElementFromURL(url)
-  # changed this to contains since the first one in the list includes the work "active"
+  # changed this to contains since the first one in the list includes the word "active"
   for show in data.xpath('//li[contains(@class, "%s")]' %xpath):
     title = show.xpath('./h3/a//text()')[0]
     api_title = String.Quote(title, usePlus = True)
