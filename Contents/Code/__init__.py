@@ -27,7 +27,8 @@ def VideoMenu():
   oc.add(InputDirectoryObject(key=Callback(ProducePrograms, url=SEARCH_URL, title='Search PBS Shows', filter='filter_title=', xpath='programItem'), title='Search for PBS Shows', summary="Click here to search for shows", prompt="Search for the shows you would like to find"))
   oc.add(DirectoryObject(key=Callback(GetEpisodes, title='Videos Expiring Soon', filter='filter_expire_datetime__lt=', uri=''), title='Videos Expiring Soon'))
   oc.add(DirectoryObject(key=Callback(GetEpisodes, title='Latest Videos', filter='filter_available_datetime__gt=', uri=''), title='Latest Videos'))
-  oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL, title='Local Channel Shows', filter='filter_producer__name=', xpath=''), title='Local Channel Shows'))
+  if Prefs['local']:
+    oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL, title='Local Channel Shows', filter='filter_producer__name=', xpath=''), title='Local Channel Shows'))
   oc.add(SearchDirectoryObject(identifier="com.plexapp.plugins.pbs", title=L("Search PBS Videos"), prompt=L("Search for Videos")))
   oc.add(PrefsObject(title = L('Preferences')))
 
@@ -51,11 +52,10 @@ def ProducePrograms(title, url, filter, xpath, query=''):
     if xpath:
       producer = xpath
     else:
-      # If they do not fill in a local PBS Call letters it will give an error when constructing the show filter later
-      if Prefs['local']:
-        producer = Prefs['local']
-      else:
-        return ObjectContainer(header='Empty', message='No Local PBS Station entered in Preferences')
+      # Check the local PBS Call letters to make sure they are the right parameters
+      producer = Prefs['local']
+      if len(producer)!= 4 or not producer.isalpha():
+        return ObjectContainer(header='Error', message='The Local PBS Station entered in Preferences is incorrect. Please enter a four letter code for your local station')
     # We then create a showlist of one, so the function will loop properly
     show_list = [producer]
   for show in show_list:
