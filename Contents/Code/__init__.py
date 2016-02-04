@@ -11,7 +11,9 @@ PAGE_SIZE  		= 12
 COVEAPI_HOST 	= 'http://api.pbs.org'
 PROGRAMS 	    = '/cove/v1/programs/?fields=associated_images&%s'
 EPISODES	    = '/cove/v1/videos/?fields=associated_images,program&filter_availability_status=Available&%s&filter_type=Episode&order_by=-airdate'
-SEARCH_URL	    = 'http://video.pbs.org/search/?q=%s'
+#The following URLs are used to pull json to build popular and searched show lists
+SEARCH_URL	    = 'http://www.pbs.org/search-videos/?q=%s&callsign=&page=1'
+SHOWS_JSON	    = 'http://www.pbs.org/shows-page/0/?genre=&title=&callsign=&alphabetically=false'
 
 ####################################################################################################
 def Start():
@@ -22,9 +24,9 @@ def Start():
 @handler('/video/pbs', 'PBS')
 def VideoMenu():
   oc = ObjectContainer(no_cache=True)
-  oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL + '/programs/', title='Featured Shows', filter='filter_title=', xpath='programItem'), title='Featured Shows'))
+  oc.add(DirectoryObject(key=Callback(ProducePrograms, url=SHOWS_JSON, title='Popular Shows', filter='filter_title='), title='Popular Shows'))
   oc.add(DirectoryObject(key=Callback(ProducePrograms, url=PBS_URL, title='All PBS Programs', filter='filter_producer__name=', xpath='PBS'), title='All PBS Programs'))
-  oc.add(InputDirectoryObject(key=Callback(ProducePrograms, url=SEARCH_URL, title='Search PBS Shows', filter='filter_title=', xpath='programItem'), title='Search for PBS Shows', summary="Click here to search for shows", prompt="Search for the shows you would like to find"))
+  oc.add(InputDirectoryObject(key=Callback(ProducePrograms, url=SEARCH_URL, title='Search PBS Shows', filter='filter_title='), title='Search for PBS Shows', summary="Click here to search for shows", prompt="Search for the shows you would like to find"))
   oc.add(DirectoryObject(key=Callback(GetEpisodes, title='Videos Expiring Soon', filter='filter_expire_datetime__lt=', uri=''), title='Videos Expiring Soon'))
   oc.add(DirectoryObject(key=Callback(GetEpisodes, title='Latest Videos', filter='filter_available_datetime__gt=', uri=''), title='Latest Videos'))
   if Prefs['local']:
@@ -38,14 +40,16 @@ def VideoMenu():
 # This function allows us to pull up shows using the API with different filters. That way we can always get the proper
 # uri number needed to produce episodes in the EpisodeFind Function. We either use the title filter or producer filter
 @route('/video/pbs/produceprograms')
-def ProducePrograms(title, url, filter, xpath, query=''):
+def ProducePrograms(title, url, filter, xpath='', query=''):
   oc = ObjectContainer(title2=title)
-  # This is for title filters. Currently titles can be pulled by a search or from the program page
-  # We then construct the url and send it to the ProgramList function to produce a list of titles
+  # This is for title filters. The titles are pulled from json by either a search or program json page
+  # We construct the url for the show search and send them to functions to produce a list of titles
   if 'title' in filter:
     if query:
       url = url %String.Quote(query, usePlus = True)
-    show_list = ProgramList(url, xpath)
+      show_list = ProgramSearchJSON(url)
+    else:
+      show_list = ProgramListJSON(url)
   # This is for producer filters. We separate it by putting 'PBS' in the xpath field
   # so it either uses that xpath field or pulls the local producer filter from the Preferences
   else:
@@ -129,13 +133,26 @@ def GetEpisodes(uri, filter, title='Episodes'):
     return oc
 
 ####################################################################################################
-@route('/video/pbs/programlist')
-def ProgramList(url, xpath):
+@route('/video/pbs/programlistjson')
+def ProgramListJSON(url):
   title_list = []
-  data = HTML.ElementFromURL(url)
-  # changed this to contains since the first one in the list includes the word "active"
-  for show in data.xpath('//li[contains(@class, "%s")]' %xpath):
-    title = show.xpath('./h3/a//text()')[0]
+  json = JSON.ObjectFromURL(url)
+  for show in json['results']['content']:
+    relevance = show['popularity']
+    if relevance < 30:
+      title = show['title']
+      api_title = String.Quote(title, usePlus = True)
+      title_list.append(api_title)
+  
+  #Log('the len of title_list is %s' %len(title_list))
+  return title_list  
+####################################################################################################
+@route('/video/pbs/programsearchjson')
+def ProgramSearchJSON(url):
+  title_list = []
+  json = JSON.ObjectFromURL(url)
+  for show in json['results']['shows']:
+    title = show['title']
     api_title = String.Quote(title, usePlus = True)
     title_list.append(api_title)
   
