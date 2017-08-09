@@ -138,11 +138,9 @@ def ProgramListJSON(url):
   title_list = []
   json = JSON.ObjectFromURL(url)
   for show in json['results']['content']:
-    relevance = show['popularity']
-    if relevance < 30:
-      title = show['title']
-      api_title = String.Quote(title, usePlus = True)
-      title_list.append(api_title)
+    title = show['title']
+    api_title = String.Quote(title, usePlus = True)
+    title_list.append(api_title)
   
   #Log('the len of title_list is %s' %len(title_list))
   return title_list  
