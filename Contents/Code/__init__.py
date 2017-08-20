@@ -15,13 +15,16 @@ EPISODES	    = '/cove/v1/videos/?fields=associated_images,program&filter_availab
 SEARCH_URL	    = 'http://www.pbs.org/search-videos/?q=%s&callsign=&page=1'
 SHOWS_JSON	    = 'http://www.pbs.org/shows-page/0/?genre=&title=&callsign=&alphabetically=false'
 
+ART = 'art-default.jpg'
+ICON = 'icon-default.jpg'
+
 ####################################################################################################
 def Start():
   ObjectContainer.title1 = 'PBS'
   HTTP.CacheTime = CACHE_INTERVAL
 
 ####################################################################################################
-@handler('/video/pbs', 'PBS')
+@handler('/video/pbs', 'PBS', art=ART, thumb=ICON)
 def VideoMenu():
   oc = ObjectContainer(no_cache=True)
   oc.add(DirectoryObject(key=Callback(ProducePrograms, url=SHOWS_JSON, title='Popular Shows', filter='filter_title='), title='Popular Shows'))
