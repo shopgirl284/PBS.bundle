@@ -1,11 +1,5 @@
 [
 	{
-		"id": "local",
-		"label": "Local PBS Station Call Letters",
-		"type": "text",
-		"default": "WUNC"
-	},
-	{
 		"id": "sort",
 		"label": "Sort Order",
 		"type": "enum",
