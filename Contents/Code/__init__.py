@@ -12,7 +12,7 @@ SHOW_URL   = 'http://www.pbs.org/shows/?genre=%s&title=&station=%s&alphabeticall
 SHOWS_JSON	    = 'http://www.pbs.org/shows-page/%s/?genre=%s&title=&callsign=%s&alphabetically=%s'
 # we would need a page, genre, callsign, alphabetically (true/false) values
 
-SEARCH_JSON	    = 'http://www.pbs.org/search-videos/?callsign=%s&filter_item_type=video&filter_video_availability=public&q=%s'
+SEARCH_JSON	    = 'https://www.pbs.org/search-videos/?filter_video_availability=public&q=%s'
 # requires callsign, query and page value, and a page number on the end
 # Provides filters and sort orders (-premiere_date or premiere_date for dated order and expire_date by expiring soonest
 # WILL NOT PRODUCE RESULTS WITHOUT CALLSIGN AND QUERY VALUE
@@ -111,20 +111,33 @@ def ProgramListJSON(title, page=0, genre='', sort='false', station='false'):
 @route(PREFIX + '/showjson')
 def ShowJSON(title, slug, thumb):
 
-	oc = ObjectContainer(title2=title)
-	callsign=Prefs['local']
-	json_url = SEARCH_JSON %(callsign, String.Quote(slug, usePlus = True)) + '&filter_show=' + String.Quote(title, usePlus = False)
-	json = JSON.ObjectFromURL(json_url+ '&page=1', headers={"X-Requested-With": "XMLHttpRequest"})
-	for section in json['filters']['filter_item_type']['options'][0]['options']:
-		section_title = section['label']
-		section_url = '%s&filter_video_type=%s&rank=%s' %(json_url, section['value'], Prefs['sort'])
-		#Log('the value of section_url is %s' %section_url)
-		oc.add(DirectoryObject(key=Callback(SearchJSON, title=section_title, url=section_url, search_type='articles'), 
-			title=section_title, 
-			thumb=Resource.ContentsOfURLWithFallback(url=thumb)
-		))
-		
-	return oc
+    oc = ObjectContainer(title2=title)
+    json_url = SEARCH_JSON % (String.Quote(slug, usePlus=True)) + '&filter_show=' + String.Quote(title, usePlus=False)
+    json_data = GetData(json_url + '&page=1', add_headers={"X-Requested-With": "XMLHttpRequest"})
+    #Log('the value of json_data is %s' %json_data)
+    json = JSON.ObjectFromString(json_data)
+
+    if len(json['filters']['filter_video_type']['options']) < 1:
+        return ObjectContainer(header="Empty", message="There are no results to list.")
+
+    for section in json['filters']['filter_video_type']['options']:
+
+        if section['count']<1:
+            Log('Section count is %s' %section['count'])
+            continue
+        section_title = section['label']
+        section_url = '%s&filter_video_type=%s&rank=%s' % (json_url, section['value'], Prefs['sort'])
+        #Log('the value of section_url is %s' %section_url)
+
+        oc.add(DirectoryObject(key=Callback(SearchJSON, title=section_title, url=section_url, search_type='articles'), 
+            title = section_title,
+            thumb = Resource.ContentsOfURLWithFallback(url=thumb)
+        ))
+
+    if len(oc) < 1:
+        return ObjectContainer(header="Empty", message="There are no results to list.")
+    else:
+        return oc
 
 ####################################################################################################
 # Pulls the videos from an html video page
